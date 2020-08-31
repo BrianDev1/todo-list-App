@@ -38,10 +38,12 @@ const dinner = new Item({
   name : "pick up dinner"
 });
 
+
 const defaultItems = [clean, milk, dinner];
 
+
 // Item.insertMany(defaultItems, function (err) {                  // Step 4 insert into the DB
-//   if(err) {
+//   if(err) {                                                    // Testing purposes
 //     console.log(err);
 //   } else {
 //     console.log("Inserted Successfully into todolistDB");
@@ -57,21 +59,40 @@ app.set('view engine', 'ejs');  //ejs templating
 
 /* Retrieving values from the form ejs template*/
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(express.static("public")); //Make public folder static
+app.use(express.static("public"));                //Make public folder static
 
-app.post("/", function(req, res){
+app.post("/", function(req, res){               //first form POST request
   const newItem = req.body.todoItem;
+  const newTodoItem = new Item();
 
   if(req.body.list === "Work"){
     workItems.push(newItem);
     res.redirect("/work");
   } else {
-    items.push(newItem);
-    console.log(items);
+    newTodoItem.name = newItem;                    // Add the input from the forms post to a Item
+    Item.insertMany(newTodoItem, function(error){   // insert this new todoItem into the mongoDB 
+      if(error){
+        console.log(error);
+      } else {
+        console.log("The item " + newItem + " was added successfully");
+      }
+    });
     res.redirect("/");  //Redirect and load home route
   }
+});
 
+app.post("/delete", function(req,res) {           // second POST request
+  const itemToDelete = req.body.deleteItem;
 
+  Item.deleteOne({_id: itemToDelete}, function(error) {
+    if (error) {
+      console.log(error);
+    } else {
+      console.log("Item deleted from todolist");
+  }
+  });
+
+  res.redirect("/");
 });
 
 /* Loading our home route */
@@ -79,19 +100,29 @@ app.get("/", function(req, res){
 
   const day = dateObject.getDate(); //Retrieving date data from the date module
 
-  /* Reading Data for MongoDB */
+  /* Reading Data from MongoDB */
 
   Item.find({}, function (error, items) {
-    if (error) {
-      console.log(error);
+
+    if(items.length === 0) {
+
+      Item.insertMany(defaultItems, function(error){
+        if (error){
+          console.log(error);
+        } else {
+          console.log("Default Items added successfully");
+        }
+
+      });
+
+      res.redirect("/");
+
     } else {
        res.render("list", { listTitle: day, listOfItems: items}); //file to render, value to display, template file
       }
   });
 
   /* Reading Data */
-  
-  //res.send();
 });
 
 /* Work Items List */
