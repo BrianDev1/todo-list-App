@@ -4,6 +4,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const dateObject = require(__dirname + "/date.js");
 const mongoose = require("mongoose");
+const _ = require("lodash");
 
 
 const app = express();
@@ -24,7 +25,7 @@ const Item = mongoose.model("Item", itemsSchema);   // Step 2, Create the model 
 
 /*** Connection */
 
-/** Inserting Data */
+/* Inserting Data */
 
 const clean = new Item({            // Step 3 create default Items to be inserted into the DB
   name: "Clean the Garage!!"
@@ -42,15 +43,21 @@ const dinner = new Item({
 const defaultItems = [clean, milk, dinner];
 
 
-// Item.insertMany(defaultItems, function (err) {                  // Step 4 insert into the DB
-//   if(err) {                                                    // Testing purposes
-//     console.log(err);
-//   } else {
-//     console.log("Inserted Successfully into todolistDB");
-//   }
-// });  
-
 /** Inserting Data */
+
+/* List */
+
+const listSchema = {                                 // Step 01  Schema
+  name: {
+    type: String,
+    required: [true, "the list needs a name"]
+  },
+  items: [itemsSchema]
+};
+
+const List = mongoose.model("List", listSchema);      // Step 02  Model
+
+
 
 
 /* MongoDB Area ****************************/
@@ -61,42 +68,10 @@ app.set('view engine', 'ejs');  //ejs templating
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.static("public"));                //Make public folder static
 
-app.post("/", function(req, res){               //first form POST request
-  const newItem = req.body.todoItem;
-  const newTodoItem = new Item();
 
-  if(req.body.list === "Work"){
-    workItems.push(newItem);
-    res.redirect("/work");
-  } else {
-    newTodoItem.name = newItem;                    // Add the input from the forms post to a Item
-    Item.insertMany(newTodoItem, function(error){   // insert this new todoItem into the mongoDB 
-      if(error){
-        console.log(error);
-      } else {
-        console.log("The item " + newItem + " was added successfully");
-      }
-    });
-    res.redirect("/");  //Redirect and load home route
-  }
-});
-
-app.post("/delete", function(req,res) {           // second POST request
-  const itemToDelete = req.body.deleteItem;
-
-  Item.deleteOne({_id: itemToDelete}, function(error) {
-    if (error) {
-      console.log(error);
-    } else {
-      console.log("Item deleted from todolist");
-  }
-  });
-
-  res.redirect("/");
-});
 
 /* Loading our home route */
-app.get("/", function(req, res){
+app.get("/", function (req, res) {
 
   const day = dateObject.getDate(); //Retrieving date data from the date module
 
@@ -104,10 +79,10 @@ app.get("/", function(req, res){
 
   Item.find({}, function (error, items) {
 
-    if(items.length === 0) {
+    if (items.length === 0) {
 
-      Item.insertMany(defaultItems, function(error){
-        if (error){
+      Item.insertMany(defaultItems, function (error) {
+        if (error) {
           console.log(error);
         } else {
           console.log("Default Items added successfully");
@@ -118,23 +93,100 @@ app.get("/", function(req, res){
       res.redirect("/");
 
     } else {
-       res.render("list", { listTitle: day, listOfItems: items}); //file to render, value to display, template file
-      }
+      res.render("list", {
+        listTitle: day,
+        listOfItems: items
+      }); //file to render, value to display, template file
+    }
   });
 
   /* Reading Data */
+
 });
 
-/* Work Items List */
-app.get("/work", function(req, res){
-  res.render("list", {listTitle: "Work List", listOfItems: workItems});
+
+app.post("/", function(req, res){               //first form POST request
+
+  const newItem = req.body.todoItem;
+  const alistTitle = req.body.list;
+  const day = dateObject.getDate();
+
+  const newTodoItem = new Item({
+    name: newItem
+  });
+ 
+
+  if (alistTitle === day) {  // Here is the issue
+    newTodoItem.save();
+    res.redirect("/");
+  } else {
+    List.findOne({name: alistTitle}, function(error, foundList){
+      foundList.items.push(newTodoItem);
+      foundList.save();
+      res.redirect("/" + alistTitle);
+    });
+  }
 });
 
-app.post("/work", function(req, res){
-  let item = req.body.newItem;
-  workItems.push(item);
-  res.redirect("/work");
+
+
+app.post("/delete", function(req,res) {           // second POST request
+  const itemToDelete = req.body.deleteItem;
+  const listName = req.body.listName;
+  const day = dateObject.getDate();
+
+  if(listName === day) {
+     Item.deleteOne({
+       _id: itemToDelete
+     }, function (error) {
+       if (error) {
+         console.log(error);
+       } else {
+         console.log("Item deleted from todolist");
+       }
+     });
+
+     res.redirect("/");
+  } else {
+    List.findOneAndUpdate({name: listName},{$pull: {items: {_id: itemToDelete}}}, function(error, foundList){
+      if(error){
+        console.log(error);
+      } else {
+        console.log("item deleted from custom list");
+        res.redirect("/" + listName);
+      }
+    });
+    
+  }
 });
+
+
+
+app.get("/:customListName", function(req,res){
+  const customList = _.capitalize(req.params.customListName);
+
+        List.findOne({name: customList}, function(err, foundList){
+          if(err){
+            console.log(err);
+          } else {
+            if(!foundList) {
+              const aList = new List({
+                name: customList,
+                items: defaultItems
+              });
+              aList.save();
+              res.redirect("/"+req.params.customListName);
+            } else {
+              res.render("list", {
+                listTitle: customList,
+                listOfItems: foundList.items
+              });
+            }
+          }
+        });
+});
+
+
 
 app.listen(3000, function(){
   console.log("Server started on port 3000");
