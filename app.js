@@ -12,7 +12,7 @@ const app = express();
 /* MongoDB Area ******************************/
 
 /*** DB Connection */
-mongoose.connect("mongodb+srv://admin-brian:testMain123@cluster0.unlr4.mongodb.net/todolistDB", { useNewUrlParser: true, useUnifiedTopology: true});
+mongoose.connect("<db>", { useNewUrlParser: true, useUnifiedTopology: true});
 
 const itemsSchema = {          // Step 1 setup the Schema for the DB
   name: {
