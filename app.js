@@ -12,7 +12,7 @@ const app = express();
 /* MongoDB Area ******************************/
 
 /*** DB Connection */
-mongoose.connect("mongodb://localhost:27017/todolistDB", { useNewUrlParser: true, useUnifiedTopology: true});
+mongoose.connect("mongodb+srv://admin-brian:testMain123@cluster0.unlr4.mongodb.net/todolistDB", { useNewUrlParser: true, useUnifiedTopology: true});
 
 const itemsSchema = {          // Step 1 setup the Schema for the DB
   name: {
@@ -108,7 +108,7 @@ app.get("/", function (req, res) {
 app.post("/", function(req, res){               //first form POST request
 
   const newItem = req.body.todoItem;
-  const alistTitle = req.body.list;
+  const alistTitle = req.body.listName;
   const day = dateObject.getDate();
 
   const newTodoItem = new Item({
@@ -116,14 +116,14 @@ app.post("/", function(req, res){               //first form POST request
   });
  
 
-  if (alistTitle === day) {  // Here is the issue
+  if (req.body.list === day) {  // Here is the issue
     newTodoItem.save();
     res.redirect("/");
   } else {
-    List.findOne({name: alistTitle}, function(error, foundList){
+    List.findOne({ name: req.body.list}, function(error, foundList){
       foundList.items.push(newTodoItem);
       foundList.save();
-      res.redirect("/" + alistTitle);
+      res.redirect("/"+req.body.list);
     });
   }
 });
@@ -135,7 +135,7 @@ app.post("/delete", function(req,res) {           // second POST request
   const listName = req.body.listName;
   const day = dateObject.getDate();
 
-  if(listName === day) {
+  if (req.body.listName === day) {
      Item.deleteOne({
        _id: itemToDelete
      }, function (error) {
@@ -148,12 +148,12 @@ app.post("/delete", function(req,res) {           // second POST request
 
      res.redirect("/");
   } else {
-    List.findOneAndUpdate({name: listName},{$pull: {items: {_id: itemToDelete}}}, function(error, foundList){
+    List.findOneAndUpdate({ name: req.body.listName},{$pull: {items: {_id: itemToDelete}}}, function(error, foundList){
       if(error){
         console.log(error);
       } else {
         console.log("item deleted from custom list");
-        res.redirect("/" + listName);
+        res.redirect("/"+req.body.listName);
       }
     });
     
@@ -163,22 +163,24 @@ app.post("/delete", function(req,res) {           // second POST request
 
 
 app.get("/:customListName", function(req,res){
-  const customList = _.capitalize(req.params.customListName);
+  const customListName = _.capitalize(req.params.customListName);
 
-        List.findOne({name: customList}, function(err, foundList){
+  List.findOne({ name: customListName}, function(err, foundList){
           if(err){
             console.log(err);
           } else {
-            if(!foundList) {
+            if (!foundList && customListName !== "Favicon.ico") {
               const aList = new List({
-                name: customList,
+                name: customListName,
                 items: defaultItems
               });
               aList.save();
               res.redirect("/"+req.params.customListName);
+            } else if (customListName === "Favicon.ico") {
+              console.log("Weird BUGGGGGGGGG!!!!! RUNNNN");
             } else {
               res.render("list", {
-                listTitle: customList,
+                listTitle: customListName,
                 listOfItems: foundList.items
               });
             }
@@ -190,4 +192,4 @@ app.get("/:customListName", function(req,res){
 
 app.listen(3000, function(){
   console.log("Server started on port 3000");
-})
+});
