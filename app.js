@@ -11,8 +11,8 @@ const app = express();
 
 /* MongoDB Area ******************************/
 
-/*** DB Connection */
-mongoose.connect("<db>", { useNewUrlParser: true, useUnifiedTopology: true});
+/*** DB Connection */ 
+mongoose.connect("<db>", { useNewUrlParser: true, useUnifiedTopology: true}); //remote connection
 
 const itemsSchema = {          // Step 1 setup the Schema for the DB
   name: {
