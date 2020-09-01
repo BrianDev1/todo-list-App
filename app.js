@@ -80,7 +80,6 @@ app.get("/", function (req, res) {
   Item.find({}, function (error, items) {
 
     if (items.length === 0) {
-
       Item.insertMany(defaultItems, function (error) {
         if (error) {
           console.log(error);
@@ -116,14 +115,14 @@ app.post("/", function(req, res){               //first form POST request
   });
  
 
-  if (req.body.list === day) {  // Here is the issue
+  if (alistTitle === day) {  // Here is the issue
     newTodoItem.save();
     res.redirect("/");
   } else {
-    List.findOne({ name: req.body.list}, function(error, foundList){
+    List.findOne({ name: alistTitle}, function(error, foundList){
       foundList.items.push(newTodoItem);
       foundList.save();
-      res.redirect("/"+req.body.list);
+      res.redirect("/"+alistTitle);
     });
   }
 });
@@ -135,7 +134,7 @@ app.post("/delete", function(req,res) {           // second POST request
   const listName = req.body.listName;
   const day = dateObject.getDate();
 
-  if (req.body.listName === day) {
+  if (listName === day) {
      Item.deleteOne({
        _id: itemToDelete
      }, function (error) {
@@ -148,12 +147,12 @@ app.post("/delete", function(req,res) {           // second POST request
 
      res.redirect("/");
   } else {
-    List.findOneAndUpdate({ name: req.body.listName},{$pull: {items: {_id: itemToDelete}}}, function(error, foundList){
+    List.findOneAndUpdate({ name: listName},{$pull: {items: {_id: itemToDelete}}}, function(error, foundList){
       if(error){
         console.log(error);
       } else {
         console.log("item deleted from custom list");
-        res.redirect("/"+req.body.listName);
+        res.redirect("/"+listName);
       }
     });
     
@@ -169,15 +168,13 @@ app.get("/:customListName", function(req,res){
           if(err){
             console.log(err);
           } else {
-            if (!foundList && customListName !== "Favicon.ico") {
+            if (!foundList) {
               const aList = new List({
                 name: customListName,
                 items: defaultItems
               });
               aList.save();
-              res.redirect("/"+req.params.customListName);
-            } else if (customListName === "Favicon.ico") {
-              console.log("Weird BUGGGGGGGGG!!!!! RUNNNN");
+              res.redirect("/"+customListName);
             } else {
               res.render("list", {
                 listTitle: customListName,
@@ -195,4 +192,6 @@ let port = process.env.PORT;
 if (port == null || port == "") {
   port = 3000;
 }
-app.listen(port);
+app.listen(port, function(){
+  console.log("successfully running!");
+});
